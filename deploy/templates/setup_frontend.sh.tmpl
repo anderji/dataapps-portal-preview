@@ -1,0 +1,17 @@
+# Build the web frontend (${frontend_dir}) inside the container; the bundle ships sources only.
+required_node="${node_min_version}"
+if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "setup.sh: node and npm are required to build ${frontend_dir}, but they are not on PATH" >&2
+    exit 1
+fi
+current_node="$$(node --version)"
+current_node="$${current_node#v}"
+IFS=. read -r cur_major cur_minor cur_patch <<< "$${current_node%%-*}"
+IFS=. read -r req_major req_minor req_patch <<< "$${required_node}"
+if (( cur_major < req_major || (cur_major == req_major && (cur_minor < req_minor || (cur_minor == req_minor && cur_patch < req_patch))) )); then
+    echo "setup.sh: Node.js $${current_node} is too old to build ${frontend_dir}; need >= $${required_node}" >&2
+    exit 1
+fi
+cd /app/${frontend_dir}
+npm ci --include=dev --no-audit --no-fund
+npm run build

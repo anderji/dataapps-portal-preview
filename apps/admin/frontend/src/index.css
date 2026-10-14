@@ -1,0 +1,11 @@
+/* Design system: the pre-compiled stylesheet carries every component's styles and the
+ * semantic tokens (the package's Tailwind-extending `styles` entry is not consumable
+ * from npm: it points at a tailwind.config.js the tarball does not ship). */
+@import '@keboola/design/styles/compiled';
+
+/* This app's own `tw:` utilities, themed with the design tokens via `@keboola/design/theme`. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme) prefix(tw);
+@import 'tailwindcss/utilities.css' layer(utilities) prefix(tw);
+@import '@keboola/design/theme';
+@source '.';

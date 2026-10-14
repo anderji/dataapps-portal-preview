@@ -1,0 +1,97 @@
+# Dataset catalogue and example security for the pharma demo warehouse (policy file version 2).
+#
+# This file no longer enforces anything by itself. It declares each dataset (source table,
+# description, columns and the logical type of every non-text column) and *example* security
+# lines. The admin's "Load example rules" copies the examples into the control-plane tables
+# row_access_rules and column_masks once (the local demo seed does it directly); from then on
+# the tables, edited in the access admin, are the only source of truth.
+#
+# load_policy refuses a catalogue whose columns or types differ from the warehouse's.
+#
+# Row model (2026-07-29 voice note): every row carries a `visibility` flag and a `company`;
+# public rows are visible to every signed-in user, private rows only to people whose
+# `company` attribute matches.
+#
+# Example semantics:
+#   rows: `show` lines union; a `hide` line removes rows for its subject. No applying show
+#         line means the dataset does not exist for the user.
+#   masks: per column, the first line whose `who` matches gives the treatment for the whole
+#          column: clear, mask_partial ("****1234"), mask_hash (salted SHA-256, joinable but
+#          unreadable) or hidden (not in the relation). No matching line means clear.
+#   who: everyone | {user: <email>} | {local_group: <id>} | {group_external_id: <IdP group id>}
+#        (an IdP group is resolved to the registered group with that external id; a line whose
+#        group is not registered is skipped and reported).
+#
+# IdP group identifiers (as in X-Kbc-User-Roles):
+#   3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a  finance (Entra)
+#   5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9  supply-chain (Entra)
+#   00g7pharmab0partner1                  partner-pharma-b (Okta)
+#
+# What changed against the version 1 grants: masking is now decided per user for the whole
+# column, never per row. Version 1 showed some columns clear on the viewer's own company's
+# rows and hidden or masked on the public rows of other companies. Those choices became one
+# treatment per column and audience, the stricter one where the two differed:
+#   drug_sales.margin         was clear on own-company rows for everyone, hidden on public rows;
+#                             now clear for finance and hidden for everyone else.
+#   drug_sales.customer_id    was partially masked on own rows and hidden on public rows;
+#                             now hashed for finance and partially masked for everyone else.
+#   stores.manager_email      was partially masked on own rows and hidden on public rows;
+#                             now clear for finance and partially masked for everyone else.
+# The rows each audience sees are the same as before.
+version: 2
+datasets:
+  drug_sales:
+    source: drug_sales
+    description: Sales of drugs per store and day, one row per sale.
+    columns: [sale_id, sale_date, company, store_id, drug, category, units, revenue, margin, customer_id, visibility, is_test]
+    types: {sale_id: numeric, sale_date: date, units: numeric, revenue: numeric, margin: numeric, is_test: boolean}
+    examples:
+      rows:
+        - {kind: show, who: everyone, filter: {conditions: [{column: visibility, op: is, value: public}]}}
+        - {kind: show, who: everyone, filter: {conditions: [{column: company, op: is, source: "attribute:company"}]}}
+        - {kind: show, who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, filter: {all: true}}
+        - {kind: hide, who: everyone, filter: {conditions: [{column: is_test, op: is, value: "true"}]}}
+      masks:
+        margin:
+          - {who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, treatment: clear}
+          - {who: everyone, treatment: hidden}
+        customer_id:
+          - {who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, treatment: mask_hash}
+          - {who: everyone, treatment: mask_partial}
+
+  stores:
+    source: stores
+    description: Pharmacies, one row per store.
+    columns: [store_id, company, name, city, region, manager_email, visibility]
+    examples:
+      rows:
+        - {kind: show, who: everyone, filter: {conditions: [{column: visibility, op: is, value: public}]}}
+        - {kind: show, who: everyone, filter: {conditions: [{column: company, op: is, source: "attribute:company"}]}}
+        - {kind: show, who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, filter: {all: true}}
+      masks:
+        manager_email:
+          - {who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, treatment: clear}
+          - {who: everyone, treatment: mask_partial}
+
+  supply_chain:
+    source: supply_chain
+    description: Inbound shipments from suppliers.
+    columns: [shipment_id, ship_date, company, supplier, drug, quantity, unit_cost, status, lead_time_days, contract_ref, visibility]
+    types: {shipment_id: numeric, ship_date: date, quantity: numeric, unit_cost: numeric, lead_time_days: numeric}
+    examples:
+      rows:
+        - {kind: show, who: {group_external_id: "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9"},
+           filter: {conditions: [{column: company, op: is, source: "attribute:company"}]}}
+        - {kind: show, who: {group_external_id: "00g7pharmab0partner1"},
+           filter: {conditions: [{column: company, op: is, source: "attribute:company"}, {column: visibility, op: is, value: public}]}}
+        - {kind: show, who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, filter: {all: true}}
+        - {kind: show, who: {user: anna.admin@pharma-a.example},
+           filter: {conditions: [{column: company, op: is, source: "attribute:company"}]}}
+      masks:
+        contract_ref:
+          - {who: {group_external_id: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"}, treatment: clear}
+          - {who: {group_external_id: "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9"}, treatment: mask_hash}
+          - {who: everyone, treatment: hidden}
+        unit_cost:
+          - {who: {group_external_id: "00g7pharmab0partner1"}, treatment: hidden}
+          - {who: {user: anna.admin@pharma-a.example}, treatment: mask_partial}

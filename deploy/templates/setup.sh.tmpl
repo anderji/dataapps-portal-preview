@@ -1,0 +1,5 @@
+#!/bin/bash
+set -Eeuo pipefail
+cd /app && uv sync
+mkdir -p /app/logs /app/data
+${frontend_build}

@@ -1,0 +1,82 @@
+# Fake OIDC identities for the local gateway. Each entry is what an IdP would
+# put into the proxy headers after login: an email and the groups claim.
+# Group values are IdP identifiers (Entra object IDs, Okta group IDs), exactly
+# like the real X-Kbc-User-Roles header — names in comments are for humans.
+#
+# `attributes` and `grants` are NOT sent by the IdP; the seed script uses them
+# to pre-fill the access store so every scenario works out of the box.
+groups:
+  entra:
+    data-app-admins: "c0a8f1d2-3b4e-4c5d-8e6f-7a8b9c0d1e2f"
+    sales-managers: "8a1d4e2f-5b6c-4d7e-9f80-1a2b3c4d5e6f"
+    finance: "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"
+    supply-chain: "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9"
+    all-employees: "0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e"
+  okta:
+    # Okta group IDs are 20 characters starting with 00g.
+    partner-pharma-b: "00g7pharmab0partner1"
+
+users:
+  - email: anna.admin@pharma-a.example
+    display_name: Anna Admin
+    persona: Data app administrator (Entra)
+    groups: [data-app-admins, all-employees]
+    attributes: {company: PHARMA_A}
+  - email: petr.sales@pharma-a.example
+    display_name: Petr Sales
+    persona: Sales manager at company A (Entra)
+    groups: [sales-managers, all-employees]
+    attributes: {company: PHARMA_A}
+  - email: lucie.finance@pharma-a.example
+    display_name: Lucie Finance
+    persona: Group finance, sees all companies (Entra)
+    groups: [finance, all-employees]
+    attributes: {company: PHARMA_A}
+  - email: eva.supply@pharma-a.example
+    display_name: Eva Supply
+    persona: Supply chain planner at company A (Entra)
+    groups: [supply-chain, all-employees]
+    attributes: {company: PHARMA_A}
+  - email: jan.partner@pharma-b.example
+    display_name: Jan Partner
+    persona: External partner from company B (Okta)
+    groups: [partner-pharma-b]
+    attributes: {company: PHARMA_B}
+  - email: tomas.nogrant@pharma-a.example
+    display_name: Tomas Nogrant
+    persona: Employee with no app grants
+    groups: [all-employees]
+    attributes: {company: PHARMA_A}
+  - email: martin.noattr@pharma-c.example
+    display_name: Martin Noattr
+    persona: Sales manager with no company attribute (data guard denies)
+    groups: [sales-managers]
+    attributes: {}
+  - email: olga.left@pharma-a.example
+    display_name: Olga Left
+    persona: Sales manager whose account is deactivated
+    groups: [sales-managers, all-employees]
+    attributes: {company: PHARMA_A}
+    active: false
+
+# Local groups: suite-defined sets of registered users (not sent by the IdP).
+# Members must be listed in `users` above.
+local_groups:
+  emea-sales:
+    name: EMEA sales
+    description: Sales and finance people covering the EMEA region
+    members: [petr.sales@pharma-a.example, lucie.finance@pharma-a.example]
+
+# App grants the seed script creates. subject is a group key, a local group
+# (`{local_group: <id>}`) or a user email.
+grants:
+  admin:
+    - {group: data-app-admins}
+  sales:
+    - {group: sales-managers}
+    - {group: finance}
+    - {user: jan.partner@pharma-b.example}
+  supply:
+    - {group: supply-chain}
+    - {group: finance}
+    - {user: anna.admin@pharma-a.example}

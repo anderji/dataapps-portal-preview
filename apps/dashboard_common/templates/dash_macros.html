@@ -1,0 +1,41 @@
+{# Shared dashboard macros. Cells come pre-classified from apps.dashboard_common.core.format_cell. #}
+{% macro cell(c) -%}
+  {%- if c.kind == 'null' -%}<span class="pill deny" title="{{ c.title }}">hidden</span>
+  {%- elif c.kind == 'partial' -%}<code class="mask" title="{{ c.title }}">{{ c.text }}</code>
+  {%- elif c.kind == 'hash' -%}<code class="mask" title="{{ c.title }}">{{ c.text }}</code>
+  {%- elif c.kind == 'number' -%}<span class="num">{{ c.text }}</span>
+  {%- else -%}{{ c.text }}{%- endif -%}
+{%- endmacro %}
+
+{% macro result_table(view, empty='No rows visible to you.') -%}
+  {% if view.error %}
+    <div class="flash err" role="alert">{{ view.error }}</div>
+  {% elif not view.rows %}
+    <p class="muted">{{ empty }}</p>
+  {% else %}
+    <div class="scroll"><table>
+      <thead><tr>{% for c in view.columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+      <tbody>{% for row in view.rows %}<tr>{% for c in row %}<td>{{ cell(c) }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+    </table></div>
+    {% if view.truncated %}<p class="muted">Result cut at {{ view.rows|length }} rows.</p>{% endif %}
+  {% endif %}
+{%- endmacro %}
+
+{% macro secured_sql(view) -%}
+  {% if view.display_sql %}
+    <details><summary class="muted">How this was secured</summary><pre>{{ view.display_sql }}</pre></details>
+  {% endif %}
+{%- endmacro %}
+
+{% macro kpi(label, value, note=None, state=None) -%}
+  <div class="card kpi">
+    <div class="muted">{{ label }}</div>
+    {% if state %}<div class="big"><span class="pill {{ state }} kpi-pill">{{ value }}</span></div>
+    {% else %}<div class="big">{{ value }}</div>{% endif %}
+    {% if note %}<div class="muted small">{{ note }}</div>{% endif %}
+  </div>
+{%- endmacro %}
+
+{% macro chart(id, spec, title) -%}
+  <div class="chart-box"><canvas id="{{ id }}" role="img" aria-label="{{ title }}" data-chart='{{ spec|tojson }}'></canvas></div>
+{%- endmacro %}

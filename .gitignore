@@ -1,0 +1,17 @@
+logs/
+data/
+.venv/
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+secrets.local.env
+skills/keboola-access-suite/assets/suite/
+dist/
+.kbc-access-suite/
+*.egg-info/
+node_modules/
+
+# Not public: customer call and voice-note transcripts
+docs/requirements/
+.DS_Store

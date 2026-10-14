@@ -1,0 +1,25 @@
+{# "What you can see": expects `visibility` from apps.dashboard_common.core.visibility_panel. #}
+<section class="card" id="what-you-can-see">
+  <h2 style="margin-top:0">What you can see</h2>
+  <p class="muted">Computed from the dataset security for you, right now. Every number on this page is filtered and masked the same way.</p>
+  <h3>Your attributes</h3>
+  {% if visibility.attributes %}
+    <p>{% for key, value in visibility.attributes %}<code>{{ key }}</code> = <b>{{ value }}</b>{% if not loop.last %} · {% endif %}{% endfor %}</p>
+  {% else %}
+    <p><span class="pill deny">none</span> <span class="muted">Row lines that compare with one of your attributes (e.g. <code>company</code>) do not apply to you.</span></p>
+  {% endif %}
+  {% for ds in visibility.datasets %}
+    <div class="ds">
+      <h3><code>{{ ds.name }}</code> <span class="muted small">{{ ds.description }}</span></h3>
+      <p class="small">Lines applied: {% for g in ds.grants %}<span class="pill allow">{{ g }}</span> {% endfor %}</p>
+      <p class="small">Columns:
+        {% for col, treatment, cls in ds.columns %}<span class="pill {{ cls }}" title="{{ treatment }}">{{ col }}{% if treatment != 'clear' %} · {{ treatment }}{% endif %}</span> {% endfor %}
+        {% for col in ds.absent %}<span class="pill deny" title="hidden">{{ col }}</span> {% endfor %}
+      </p>
+    </div>
+  {% endfor %}
+  {% if visibility.hidden %}
+    <p class="small">Datasets you cannot see at all: {% for name in visibility.hidden %}<span class="pill deny">{{ name }}</span> {% endfor %}</p>
+  {% endif %}
+  <p class="small muted">Legend: <span class="pill allow">clear</span> <span class="pill mask">masked</span> <span class="pill deny">hidden</span></p>
+</section>

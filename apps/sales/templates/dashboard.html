@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% from "dash_macros.html" import result_table, secured_sql, kpi, chart %}
+{% block head %}{% include "dash_styles.html" %}{% endblock %}
+{% block nav %}{% include "dash_nav.html" %}{% endblock %}
+{% block content %}
+<h1>Drug sales</h1>
+{% if no_data %}
+  <div class="flash err">No sales dataset is visible to you. The app let you in, but no row line of its security shows you any rows.</div>
+{% else %}
+<p class="muted">Every figure below is computed only from the rows and columns the policy shows you.</p>
+
+{% if kpi_view.error %}<div class="flash err">{{ kpi_view.error }}</div>{% else %}
+<div class="grid" id="kpis">
+  {{ kpi('Revenue', kpis.revenue|num) }}
+  {{ kpi('Units sold', kpis.units|num) }}
+  {{ kpi('Number of sales', kpis.sales|num) }}
+  {{ kpi('Avg margin (margin / revenue)', margin.value, margin.note, margin.state) }}
+</div>
+{% endif %}
+
+<div class="two">
+  <section class="card">
+    <h2 style="margin-top:0">Revenue by company</h2>
+    {{ chart('chart-company', company_chart, 'Revenue by company, stacked by visibility') }}
+    <details><summary class="muted">Table</summary>
+    {% if by_company.error %}<div class="flash err">{{ by_company.error }}</div>{% else %}
+    <div class="scroll"><table id="by-company">
+      <thead><tr><th>company</th><th>visibility</th><th>sales</th><th>revenue</th></tr></thead>
+      <tbody>{% for r in by_company.records() %}
+        <tr><td>{{ r.company }}</td><td>{{ r.visibility }}</td><td class="num">{{ r.sales|num }}</td><td class="num">{{ r.revenue|num }}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>{% endif %}
+    </details>
+  </section>
+  <section class="card">
+    <h2 style="margin-top:0">Revenue by category</h2>
+    {{ chart('chart-category', category_chart, 'Revenue by category') }}
+    <details><summary class="muted">Table</summary>{{ result_table(by_category) }}</details>
+  </section>
+</div>
+
+<section class="card">
+  <h2 style="margin-top:0">Monthly revenue</h2>
+  {{ chart('chart-monthly', monthly_chart, 'Monthly revenue trend') }}
+  <details><summary class="muted">Table</summary>{{ result_table(monthly) }}</details>
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0">Top stores</h2>
+  <p class="small muted">A join of <code>drug_sales</code> and <code>stores</code>, both secured: a sale counts only if you can see the sale <em>and</em> its store.</p>
+  {{ result_table(top_stores) }}
+  {{ secured_sql(top_stores) }}
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0">Latest {{ sample_size }} sales, as they reach you</h2>
+  <p class="small muted">Masked values are shown exactly as the guard returns them: <code class="mask">****1234</code> is partially masked, short hex codes are salted hashes (hover for the full value), <span class="pill deny">hidden</span> is a NULL the policy put there.</p>
+  {{ result_table(sample) }}
+  {{ secured_sql(sample) }}
+</section>
+{% endif %}
+
+{% include "dash_visibility.html" %}
+{% if not no_data %}{% include "dash_charts.html" %}{% endif %}
+{% endblock %}

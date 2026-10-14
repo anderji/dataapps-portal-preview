@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "dash_macros.html" import result_table, secured_sql %}
+{% block title %}Ad-hoc SQL · {{ app_name }}{% endblock %}
+{% block head %}{% include "dash_styles.html" %}{% endblock %}
+{% block nav %}{% include "dash_nav.html" %}{% endblock %}
+{% block content %}
+<h1>Ad-hoc SQL</h1>
+<p class="muted">Write plain SQL against dataset names. The data guard rewrites every dataset reference to your secured version before anything runs; at most {{ max_rows }} rows come back.</p>
+<form method="post" action="query" class="card">
+  <label for="sql" class="muted small">Query</label>
+  <textarea id="sql" name="sql" class="sql" rows="6" spellcheck="false">{{ sql }}</textarea>
+  <p><button type="submit">Run</button></p>
+</form>
+<div class="card">
+  <h2 style="margin-top:0">Examples</h2>
+  <div class="examples">
+    {% for ex in examples %}
+      <form method="post" action="query">
+        <input type="hidden" name="sql" value="{{ ex.sql }}">
+        <button type="submit" class="{{ 'danger' if ex.expectation == 'refused' else ('ghost' if ex.expectation == 'neutralised' else '') }}" title="{{ ex.sql }}">{{ ex.label }}</button>
+      </form>
+    {% endfor %}
+  </div>
+  <p class="small muted">Red buttons are attacks the guard must refuse; outlined ones run, but only against your secured rows.</p>
+</div>
+{% if view %}
+<section class="card" id="result">
+  <h2 style="margin-top:0">Result</h2>
+  {% if view.error %}<p class="small muted">Refused or failed — nothing was returned.</p>{% endif %}
+  {{ result_table(view, 'The query ran and returned no rows you can see.') }}
+  {% if view.datasets %}<p class="small muted">Datasets read: {% for d in view.datasets %}<code>{{ d }}</code> {% endfor %}</p>{% endif %}
+  {{ secured_sql(view) }}
+</section>
+{% endif %}
+<details><summary>What you can see</summary>{% include "dash_visibility.html" %}</details>
+{% endblock %}

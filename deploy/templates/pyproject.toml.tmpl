@@ -1,0 +1,12 @@
+[project]
+name = "kbc-access-$app_id"
+version = "0.1.0"
+description = "$app_name — part of the Data App access-control suite"
+requires-python = ">=3.12"
+dependencies = [
+$dependencies
+]
+
+[tool.uv]
+# Not an installable package: the code runs from /app with PYTHONPATH set by supervisord.
+package = false

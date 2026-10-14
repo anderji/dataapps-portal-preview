@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Your apps</h1>
+{% if user and not user.active %}
+  <div class="flash err">Your account is deactivated in the access admin, so no app will let you in.</div>
+{% endif %}
+{% if apps %}
+<div class="grid">
+  {% for app in apps %}
+  <a class="card" href="{{ app.url }}" style="text-decoration:none;color:inherit">
+    <div class="big" style="font-size:18px">{{ app.name }}</div>
+    <div class="muted">{{ app.app_id }}{% if app.source == "discovered" %} · project {{ app.project_id }}{% endif %}</div>
+    <div class="muted" style="word-break:break-all">{{ app.url }}</div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <p>You don't have access to any app yet. Ask a data app administrator to grant you or one of your groups access.</p>
+</div>
+{% endif %}
+<p class="muted">{{ apps|length }} of {{ total_apps }} active app(s) available to you. Each app checks your access again when you open it.</p>
+
+<h2>What the launcher knows about you</h2>
+<div class="card scroll">
+<table>
+  <tr><th>Email</th><td>{{ principal.email }}{% if not user %} <span class="pill mask">not in the users table</span>{% endif %}</td></tr>
+  <tr><th>IdP groups</th><td>
+    {% for external_id, names in groups_known %}
+      <code>{{ external_id }}</code> {% if names %}<span class="pill allow">{{ names|join(", ") }}</span>{% else %}<span class="pill mask">unknown to access admin</span>{% endif %}<br>
+    {% else %}<span class="muted">none</span>{% endfor %}
+  </td></tr>
+  <tr><th>Local groups</th><td>
+    {% for group in local_groups %}
+      <code>{{ group.local_group_id }}</code> <span class="pill allow">{{ group.name }}</span><br>
+    {% else %}<span class="muted">none</span>{% endfor %}
+  </td></tr>
+</table>
+</div>
+{% endblock %}

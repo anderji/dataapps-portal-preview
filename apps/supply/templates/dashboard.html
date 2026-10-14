@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% from "dash_macros.html" import result_table, secured_sql, kpi, chart %}
+{% block head %}{% include "dash_styles.html" %}{% endblock %}
+{% block nav %}{% include "dash_nav.html" %}{% endblock %}
+{% block content %}
+<h1>Supply chain</h1>
+{% if no_data %}
+  <div class="flash err">No shipment dataset is visible to you. The app let you in, but no row line of its security shows you any rows.</div>
+{% else %}
+<p class="muted">Inbound shipments, filtered and masked for you by the data guard.</p>
+
+{% if kpi_view.error %}<div class="flash err">{{ kpi_view.error }}</div>{% else %}
+<div class="grid" id="kpis">
+  {{ kpi('Shipments', kpis.shipments|num) }}
+  {{ kpi('Quantity', kpis.quantity|num) }}
+  {{ kpi('Delayed share', kpis.delayed_share|pct) }}
+  {{ kpi('Avg lead time', (kpis.avg_lead_days|num(1)) ~ ' days') }}
+</div>
+{% endif %}
+
+<div class="two">
+  <section class="card">
+    <h2 style="margin-top:0">Shipments by supplier</h2>
+    {{ chart('chart-supplier', supplier_chart, 'Shipments by supplier') }}
+    <details><summary class="muted">Table</summary>{{ result_table(by_supplier) }}</details>
+  </section>
+  <section class="card">
+    <h2 style="margin-top:0">Shipments by status</h2>
+    {{ chart('chart-status', status_chart, 'Shipments by status') }}
+    <details><summary class="muted">Table</summary>{{ result_table(by_status) }}</details>
+  </section>
+</div>
+
+<section class="card" id="unit-cost">
+  <h2 style="margin-top:0">Average unit cost by supplier</h2>
+  {% if cost_state == 'absent' %}
+    <p><span class="pill deny">hidden</span> {{ cost_note }}</p>
+  {% elif cost_state == 'masked' %}
+    <p><span class="pill mask">masked</span> {{ cost_note }}</p>
+    {% if cost_samples %}<p class="small muted">What unit_cost looks like to you:</p>{{ result_table(cost_samples) }}{% endif %}
+  {% else %}
+    {% if cost_note %}<p><span class="pill mask">partly hidden</span> {{ cost_note }}</p>{% endif %}
+    {% if cost_chart %}{{ chart('chart-cost', cost_chart, 'Average unit cost by supplier') }}{% endif %}
+    <details><summary class="muted">Table</summary>{{ result_table(cost_view) }}</details>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0">Quantity per month</h2>
+  {{ chart('chart-monthly', monthly_chart, 'Shipped quantity per month') }}
+  <details><summary class="muted">Table</summary>{{ result_table(monthly) }}</details>
+</section>
+
+<section class="card">
+  <h2 style="margin-top:0">Recent {{ recent_size }} shipments, as they reach you</h2>
+  <p class="small muted"><code class="mask">****2.33</code> is partially masked, short hex codes are salted hashes (hover for the full value), <span class="pill deny">hidden</span> is a NULL the policy put there. Absent columns are simply not there.</p>
+  {{ result_table(recent) }}
+  {{ secured_sql(recent) }}
+</section>
+{% endif %}
+
+{% include "dash_visibility.html" %}
+{% if not no_data %}{% include "dash_charts.html" %}{% endif %}
+{% endblock %}

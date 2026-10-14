@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fake IdP sign-in</title>
+<style>
+:root{--paper:#F2F4F3;--card:#fff;--ink:#101614;--muted:#5b6662;--line:#d8ddda;--accent:#10504A;--deny:#96332B;--code:#e8ecea}
+@media (prefers-color-scheme: dark){:root{--paper:#0f1412;--card:#161d1a;--ink:#e7ece9;--muted:#9aa6a1;--line:#2a3430;--accent:#4fb3a6;--deny:#e57b70;--code:#1e2723}}
+*{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px}
+.banner{background:var(--deny);color:#fff;padding:8px 16px;font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+.users{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.user button{width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;font:inherit}
+.user button:hover{border-color:var(--accent)}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--code);padding:1px 4px;border-radius:4px;word-break:break-all}
+.muted{color:var(--muted);font-size:13px} .off{color:var(--deny);font-size:12px}
+input,textarea{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+label{display:block;margin:8px 0 2px;font-size:13px;color:var(--muted)}
+.submit{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit;margin-top:10px}
+.checks label{display:flex;gap:8px;align-items:center;color:var(--ink)} .checks input{width:auto}
+</style>
+</head>
+<body>
+<div class="banner">Local development only — fake identity provider. The real apps-proxy authenticates against Entra ID or Okta.</div>
+<main>
+  <h1>Sign in to {{ app_name }}</h1>
+  {% if current %}<p class="muted">Currently signed in as <b>{{ current.email }}</b> · <a href="{{ logout_path }}">sign out</a></p>{% endif %}
+  <p class="muted">Pick a persona. The gateway will send the app <code>{{ email_header }}</code> and <code>{{ roles_header }}</code> with the persona's IdP group IDs, exactly like the proxy after an OIDC login.</p>
+  <div class="users">
+  {% for u in users %}
+    <form method="post" action="{{ login_path }}" class="user">
+      <input type="hidden" name="email" value="{{ u.email }}">
+      {% for key, provider, gid in u.resolved %}<input type="hidden" name="groups_selected" value="{{ gid }}">{% endfor %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit">
+        <b>{{ u.display_name }}</b> {% if not u.active %}<span class="off">deactivated in access admin</span>{% endif %}<br>
+        <span class="muted">{{ u.persona }}</span><br>
+        <span class="muted">{{ u.email }}</span><br>
+        {% for key, provider, gid in u.resolved %}<code>{{ provider }}:{{ key }}</code> {% else %}<span class="muted">no groups</span>{% endfor %}
+      </button>
+    </form>
+  {% endfor %}
+  </div>
+
+  <div class="card">
+    <h2>Custom identity</h2>
+    <p class="muted">For anything the personas don't cover: an unknown user, a group the access admin doesn't know, a malformed group ID.</p>
+    <form method="post" action="{{ login_path }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <label>Email</label><input name="email" required placeholder="someone@example.com">
+      <label>Known groups</label>
+      <div class="checks">
+      {% for key, provider, gid in groups %}<label><input type="checkbox" name="groups_selected" value="{{ gid }}"> {{ provider }}:{{ key }} <code>{{ gid }}</code></label>{% endfor %}
+      </div>
+      <label>Extra group IDs (one per line or comma separated)</label><textarea name="extra_groups" rows="2"></textarea>
+      <button class="submit" type="submit">Sign in</button>
+    </form>
+  </div>
+</main>
+</body>
+</html>

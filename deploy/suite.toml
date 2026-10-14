@@ -1,0 +1,90 @@
+# Which apps the suite can deploy into Keboola, and what each one ships.
+# Read by scripts/build_app_bundle.py. Paths are relative to the repo root.
+
+# Internal port uvicorn listens on inside the Data App container (nginx on 8888 proxies to it).
+internal_port = 8050
+
+# Runtime dependencies of every deployed app (the library imports the data guard,
+# so duckdb and sqlglot are needed even by the admin app and the launcher).
+dependencies = [
+    "fastapi~=0.141.1",
+    "uvicorn[standard]~=0.53.0",
+    "httpx~=0.28.1",
+    "jinja2~=3.1.6",
+    "pydantic~=2.13.5",
+    "pyyaml~=6.0.3",
+    "sqlglot~=30.19.0",
+    "duckdb~=1.5.5",
+    "python-multipart~=0.0.32",
+    "keboola-query-service~=0.3.0",
+]
+
+# Copied into every bundle.
+common = ["src/kbc_access", "apps/__init__.py"]
+
+# Oldest Node.js (major.minor.patch) that can build an app's web frontend. An app may
+# declare `frontend = "<dir>"` (a directory inside one of its `paths`, holding an npm
+# project with package.json and package-lock.json). Its bundle then ships the sources
+# only — never node_modules/ or dist/ — and keboola-config/setup.sh builds it inside the
+# Data App container (the image has Node): it checks `node --version` against this
+# minimum, then runs `npm ci --include=dev` and `npm run build` in /app/<dir>.
+# scripts/dev.py builds the same frontends locally before starting the suite.
+# Vite 8 needs ^20.19 || >=22.12; the keboola/data-app-python-js image ships Node 20.19.2
+# (seen live), so the minimum is 20.19.0. Node 22.0-22.11 would pass this check but not Vite.
+node_min_version = "20.19.0"
+
+# Dashboards (phase 2) read their data through Direct Storage Access: at start (and
+# every refresh_seconds) they pull these tables from the demo bucket through the
+# Query Service into duckdb_path, and the data guard runs on that file.
+[data]
+refresh_seconds = 1800
+duckdb_path = "data/warehouse.duckdb"
+tables = ["companies", "stores", "drug_sales", "supply_chain"]
+dialect = "duckdb"
+max_result_rows = 500
+max_query_chars = 20000
+policy_files = ["config/policies/pharma.yaml"]
+
+[apps.admin]
+name = "Access admin"
+factory = "apps.admin.main:create_default"
+# config/policies: the admin reads the datasets and columns it offers for per-user row and column rules.
+paths = ["apps/admin", "config/policies"]
+# Gets a [policy] section always (the dataset catalogue) and, once the demo data exists (phase 2),
+# a [data] section with Direct Storage Access to it: the security editor's "Test as" preview,
+# row counts and value suggestions read the data. Before phase 2 it runs without data.
+reads_policy = true
+reads_data_if_available = true
+# React SPA served by the admin app from <frontend>/dist (built by setup.sh / scripts/dev.py).
+frontend = "apps/admin/frontend"
+phase = 1
+
+[apps.launcher]
+name = "App launcher"
+factory = "apps.launcher.main:create_default"
+paths = ["apps/launcher"]
+phase = 1
+
+[apps.sales]
+name = "Drug sales dashboard"
+factory = "apps.sales.main:create_default"
+paths = ["apps/sales", "apps/dashboard_common", "config/policies"]
+phase = 2
+reads_data = true
+
+[apps.supply]
+name = "Supply chain dashboard"
+factory = "apps.supply.main:create_default"
+paths = ["apps/supply", "apps/dashboard_common", "config/policies"]
+phase = 2
+reads_data = true
+
+# Demo data for phase 2 (the same generator the local suite uses; see kbc_access.demo_seed).
+[demo_seed]
+random_seed = 20260923
+drug_sales_rows = 1500
+supply_chain_rows = 600
+public_share = 0.2
+test_share = 0.05
+start_date = "2026-01-01"
+days = 240

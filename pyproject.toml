@@ -1,0 +1,17 @@
+[project]
+name = "kbc-access"
+version = "0.1.0"
+description = "Access control for Keboola Data Apps: app gate, row/column security, audit"
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src", "."]
+include = ["kbc_access*", "apps*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

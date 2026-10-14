@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ app_name }}{% endblock %}</title>
+<style>
+:root{--paper:#F2F4F3;--card:#fff;--ink:#101614;--muted:#5b6662;--line:#d8ddda;--accent:#10504A;--allow:#2E6B4F;--mask:#8A6512;--deny:#96332B;--code:#e8ecea}
+@media (prefers-color-scheme: dark){:root{--paper:#0f1412;--card:#161d1a;--ink:#e7ece9;--muted:#9aa6a1;--line:#2a3430;--accent:#4fb3a6;--allow:#6cc59a;--mask:#e0b35a;--deny:#e57b70;--code:#1e2723}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+header .app{font-weight:650}
+header .app small{color:var(--muted);font-weight:400;margin-left:8px}
+.who{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.who b{color:var(--ink)}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 20px;border-bottom:1px solid var(--line)}
+nav a{padding:6px 10px;border-radius:6px;color:var(--ink);text-decoration:none}
+nav a.on{background:var(--accent);color:#fff}
+main{max-width:1180px;margin:0 auto;padding:20px}
+h1{font-size:22px;margin:4px 0 12px} h2{font-size:17px;margin:24px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--muted)}
+.scroll{overflow-x:auto}
+code,pre,textarea.sql{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+pre{background:var(--code);padding:10px;border-radius:8px;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+textarea{width:100%}
+button,.btn{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;text-decoration:none;display:inline-block}
+button.ghost,.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.danger{background:var(--deny)}
+form.inline{display:inline}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+.row label{display:flex;flex-direction:column;font-size:12px;color:var(--muted);gap:2px}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:12px;border:1px solid var(--line)}
+.allow{color:var(--allow);border-color:var(--allow)} .mask{color:var(--mask);border-color:var(--mask)} .deny{color:var(--deny);border-color:var(--deny)}
+.flash{padding:10px 12px;border-radius:8px;margin:8px 0;border:1px solid}
+.flash.err{border-color:var(--deny);color:var(--deny)} .flash.ok{border-color:var(--allow);color:var(--allow)}
+.muted{color:var(--muted)} .big{font-size:28px;font-weight:650}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body>
+<header>
+  <div class="app">{{ app_name }}<small>{{ app_id }}</small></div>
+  <div class="who">
+    {% if principal %}
+      <span>Signed in as <b>{{ principal.email }}</b></span>
+      <span>{{ principal.groups|length }} group(s)</span>
+    {% else %}<span>Not signed in</span>{% endif %}
+    <a class="btn ghost" href="{{ launcher_url }}">Launcher</a>
+    <a class="btn ghost" href="{{ switch_user_path }}?next={{ request.url.path|urlencode }}">Switch user</a>
+  </div>
+</header>
+{% block nav %}{% endblock %}
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>

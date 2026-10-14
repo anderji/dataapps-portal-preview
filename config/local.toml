@@ -1,0 +1,125 @@
+# Local development configuration for the Data App access-control suite.
+# Every value here is required; the loader fails fast on anything missing.
+# Secrets (session secret, masking salt) live in .env, never here.
+
+[identity]
+# Headers the Keboola apps-proxy sets after OIDC login. Only these are trusted.
+email_header = "X-Kbc-User-Email"
+roles_header = "X-Kbc-User-Roles"
+# Separator used inside the roles header value.
+roles_separator = ","
+# Prefix the proxy owns: client-sent headers with this prefix are stripped by the proxy.
+trusted_prefix = "x-kbc-"
+# Identity-looking headers that must never be trusted; their presence is logged as hostile.
+hostile_headers = ["x-forwarded-email", "x-forwarded-user", "x-forwarded-groups", "x-auth-request-email", "x-user-email", "remote-user"]
+
+[providers.entra]
+label = "Microsoft Entra ID"
+# Entra emits group object IDs (GUIDs) in the groups claim.
+group_id_pattern = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+example = "3f2b8c1e-7d4a-4e5b-9a61-2c8d0f4e1b7a"
+
+[providers.okta]
+label = "Okta"
+# Okta group IDs are 20 chars starting with 00g. UNVERIFIED against the proxy:
+# Okta's groups claim emits group *names* by default (see design doc, Phase 0).
+group_id_pattern = "^00g[0-9A-Za-z]{17}$"
+example = "00g1a2b3c4d5e6f7g8h9"
+
+[store]
+# Local implementation of the access store (apps, users, groups, grants, attributes).
+backend = "sqlite"
+sqlite_path = "data/access.sqlite"
+
+[ui]
+# "Switch user" goes to the fake IdP's login page (must match [gateway] login_path).
+switch_user_path = "/_dev/login"
+
+[data]
+# Fake analytical data the demo dashboards read through the data guard.
+duckdb_path = "data/warehouse.duckdb"
+dialect = "duckdb"
+# Upper bound on rows an ad-hoc query returns to the browser.
+max_result_rows = 500
+# Longest ad-hoc query accepted, in characters (bounds parser work).
+max_query_chars = 20000
+
+[gate]
+# How long an app caches the ACL; a revoked grant takes effect within this window.
+cache_ttl_seconds = 5
+
+[audit]
+path = "logs/audit.jsonl"
+# How many lines the admin audit view shows.
+tail_lines = 200
+
+[logging]
+path = "logs/app.log"
+level = "INFO"
+
+[policy]
+# Row/column security policies, one YAML per dataset set.
+files = ["config/policies/pharma.yaml"]
+
+[gateway]
+# Fake apps-proxy + fake OIDC IdP. Local only. One gateway listens on each app's
+# public_port (its own origin, like a Keboola Data App URL) and forwards to the
+# app's internal port. Browsers share cookies across ports on one host, so one
+# fake login covers all apps.
+host = "127.0.0.1"
+login_path = "/_dev/login"
+logout_path = "/_dev/logout"
+session_cookie = "kbc_dev_session"
+fake_users_file = "config/fake_users.yaml"
+upstream_timeout_seconds = 30
+
+[discovery]
+# Discovery of this project's Data Apps (runs only when deployed in Keboola).
+http_timeout_seconds = 30
+data_apps_component_id = "keboola.data-apps"
+
+# Apps in the suite. `port` is internal (only the gateway talks to it); `public_port`
+# is what the browser opens.
+[apps.launcher]
+name = "App launcher"
+port = 8701
+public_port = 8801
+# uvicorn --factory target: a zero-argument function returning the FastAPI app.
+factory = "apps.launcher.main:create_default"
+protected = false
+
+[apps.admin]
+name = "Access admin"
+port = 8702
+public_port = 8802
+# uvicorn --factory target: a zero-argument function returning the FastAPI app.
+factory = "apps.admin.main:create_default"
+protected = true
+
+[apps.sales]
+name = "Drug sales dashboard"
+port = 8703
+public_port = 8803
+# uvicorn --factory target: a zero-argument function returning the FastAPI app.
+factory = "apps.sales.main:create_default"
+protected = true
+
+[apps.supply]
+name = "Supply chain dashboard"
+port = 8704
+public_port = 8804
+# uvicorn --factory target: a zero-argument function returning the FastAPI app.
+factory = "apps.supply.main:create_default"
+protected = true
+
+[seed]
+# Fake warehouse generator (scripts/seed.py).
+random_seed = 20260923
+drug_sales_rows = 1500
+supply_chain_rows = 600
+# Share of rows marked visibility = 'public' (visible to every authenticated user).
+public_share = 0.2
+# Share of drug_sales rows flagged as test data (hidden by a restrictive rule).
+test_share = 0.05
+start_date = "2026-01-01"
+days = 240

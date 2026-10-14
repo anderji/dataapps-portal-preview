@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Sign in · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Not signed in</h1>
+  <p>The request reached the app without identity headers from the proxy ({{ reason }}).</p>
+  <p><a class="btn" href="{{ switch_user_path }}?next={{ request.url.path|urlencode }}">Sign in</a></p>
+</div>
+{% endblock %}

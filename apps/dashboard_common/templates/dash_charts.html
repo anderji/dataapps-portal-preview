@@ -1,0 +1,36 @@
+{# Chart.js from the CDN (pinned). Local dev only: every chart has a plain table under it. #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (!window.Chart) { return; }  // CDN unreachable: the tables below each chart still show the data
+  var charts = [];
+  function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function draw() {
+    charts.forEach(function (c) { c.destroy(); });
+    charts = [];
+    var palette = [cssVar('--accent'), cssVar('--mask'), cssVar('--allow'), cssVar('--deny'), cssVar('--muted')];
+    var ink = cssVar('--muted'), grid = cssVar('--line');
+    document.querySelectorAll('canvas[data-chart]').forEach(function (canvas) {
+      var spec = JSON.parse(canvas.dataset.chart);
+      var datasets = spec.series.map(function (s, i) {
+        var color = palette[i % palette.length];
+        return { label: s.label, data: s.data, backgroundColor: color, borderColor: color, tension: 0.25, fill: false };
+      });
+      var axis = { ticks: { color: ink }, grid: { color: grid }, stacked: spec.stacked };
+      charts.push(new Chart(canvas, {
+        type: spec.type,
+        data: { labels: spec.labels, datasets: datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          indexAxis: spec.horizontal ? 'y' : 'x',
+          plugins: { legend: { display: datasets.length > 1, labels: { color: ink } } },
+          scales: { x: axis, y: Object.assign({}, axis, { beginAtZero: true }) }
+        }
+      }));
+    });
+  }
+  draw();
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) { mq.addEventListener('change', draw); }
+})();
+</script>

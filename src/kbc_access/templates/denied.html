@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}No access · {{ app_name }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h1>Sorry, you can't get in here</h1>
+  <p>{{ message }}</p>
+  <p class="muted">Reason code: <code>{{ reason }}</code> · app <code>{{ app_id }}</code></p>
+  <h2>Who the app thinks you are</h2>
+  <table>
+    <tr><th>Email</th><td>{{ principal.email }}</td></tr>
+    <tr><th>Groups from the IdP</th><td>{% for g in principal.groups|sort %}<code>{{ g }}</code><br>{% else %}<span class="muted">none</span>{% endfor %}</td></tr>
+  </table>
+  <p><a class="btn" href="{{ launcher_url }}">Go to the launcher</a></p>
+</div>
+{% endblock %}
