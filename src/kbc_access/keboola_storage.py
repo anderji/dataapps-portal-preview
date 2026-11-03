@@ -164,10 +164,14 @@ class StorageClient:
         return [str(c) for c in detail.get("columns", [])]
 
     def add_column(self, table_id: str, name: str) -> None:
-        """Add an untyped column to an existing table; existing rows read it as empty."""
-        job = self._call("POST", f"/v2/storage/tables/{quote(table_id, safe='')}/columns", data={"name": name}).json()
-        if isinstance(job, dict) and "id" in job and "status" in job:
-            self._wait(job)
+        """Add an untyped column to an existing table; existing rows read it as empty.
+
+        The endpoint takes a JSON body (a form body is refused with HTTP 400 "Invalid JSON
+        payload") and answers synchronously with the updated table; an async job is waited for.
+        """
+        result = self._call("POST", f"/v2/storage/tables/{quote(table_id, safe='')}/columns", json={"name": name}).json()
+        if isinstance(result, dict) and "status" in result and "operationName" in result:
+            self._wait(result)
 
     def list_tables(self, bucket_id: str) -> list[str]:
         tables = self._call("GET", f"/v2/storage/buckets/{quote(bucket_id, safe='')}/tables").json()

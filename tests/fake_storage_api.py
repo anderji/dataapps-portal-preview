@@ -392,17 +392,18 @@ class FakeStorageApi:
         return self._new_job("import", table.table_id, apply)
 
     def _add_column(self, table: FakeTable, request: httpx.Request) -> httpx.Response:
-        name = self._form(request)["name"]
-
-        def apply() -> None:
-            if name in table.columns:
-                raise JobFailure(f"Column {name} already exists")
-            self.added_columns.append((table.table_id, name))
-            table.columns.append(name)
-            for row in table.rows:
-                row[name] = ""
-
-        return self._new_job("add_column", table.table_id, apply)
+        # Like the real endpoint: JSON body only (a form body is a 400), synchronous answer.
+        try:
+            name = json.loads(request.content.decode("utf-8"))["name"]
+        except (ValueError, KeyError, TypeError):
+            return self._error(400, "Invalid JSON payload received. Please check the request body and try again.")
+        if name in table.columns:
+            return self._error(400, f"Column {name} already exists")
+        self.added_columns.append((table.table_id, name))
+        table.columns.append(name)
+        for row in table.rows:
+            row[name] = ""
+        return self._json({"id": table.table_id, "columns": list(table.columns)})
 
     def _delete_rows(self, table: FakeTable, request: httpx.Request) -> httpx.Response:
         column = request.url.params.get("whereColumn")
